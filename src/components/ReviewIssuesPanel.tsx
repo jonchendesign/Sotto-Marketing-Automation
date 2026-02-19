@@ -22,7 +22,7 @@ export default function ReviewIssuesPanel({
     <div className="drawer-overlay" onClick={onClose}>
       <div className="drawer review-issues-drawer" onClick={(e) => e.stopPropagation()}>
         <div className="drawer-header">
-          <h3>Check before you publish</h3>
+          <h3>Review before you publish</h3>
           <button type="button" className="drawer-close" onClick={onClose} aria-label="Close">×</button>
         </div>
         <div className="drawer-content">

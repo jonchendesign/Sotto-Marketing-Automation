@@ -9,14 +9,20 @@ import express from 'express';
 import cors from 'cors';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.join(__dirname, '..', '.env') });
+const projectRoot = path.join(__dirname, '..');
+dotenv.config({ path: path.join(projectRoot, '.env') });
+if (!process.env.GEMINI_API_KEY) {
+  dotenv.config({ path: path.join(process.cwd(), '.env') });
+}
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+// Default: gemini-3-flash-preview (e.g. 1500 RPD). Override with GEMINI_MODEL in .env.
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3-flash-preview';
+const GEMINI_FALLBACK_MODELS = ['gemini-3-flash-preview', 'gemini-flash-latest', 'gemini-3-pro-preview'];
 const GEMINI_URL = (model) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
 
@@ -28,6 +34,10 @@ function parseJsonFromText(text) {
     const match = stripped.match(/\{[\s\S]*\}/);
     return match ? JSON.parse(match[0]) : null;
   }
+}
+
+async function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 async function callGemini(prompt, systemInstruction = null, jsonMode = true) {
@@ -45,19 +55,31 @@ async function callGemini(prompt, systemInstruction = null, jsonMode = true) {
       systemInstruction: { parts: [{ text: systemInstruction }] },
     }),
   };
-  const res = await fetch(GEMINI_URL(GEMINI_MODEL), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Gemini API error: ${res.status} ${err}`);
+  const modelsToTry = [GEMINI_MODEL, ...GEMINI_FALLBACK_MODELS.filter((m) => m !== GEMINI_MODEL)];
+  let lastError;
+  for (const model of modelsToTry) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const res = await fetch(GEMINI_URL(model), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) throw new Error('No text in Gemini response');
+        return jsonMode ? parseJsonFromText(text) : text;
+      }
+      const err = await res.text();
+      lastError = new Error(`Gemini API error: ${res.status} ${err}`);
+      if (res.status === 503 && attempt < 3) {
+        await sleep(1000 * attempt);
+        continue;
+      }
+      if (res.status !== 503) break;
+    }
   }
-  const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('No text in Gemini response');
-  return jsonMode ? parseJsonFromText(text) : text;
+  throw lastError;
 }
 
 // --- 1) generateCampaignDraft(intent, kbContext) -> CampaignDraft

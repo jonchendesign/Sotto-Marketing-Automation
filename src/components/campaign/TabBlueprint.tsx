@@ -5,6 +5,29 @@ const TONE_OPTIONS = ['Brand', 'Playful', 'Premium', 'Direct'] as const;
 const OFFER_OPTIONS = ['No discount', 'Escalate', 'Always'] as const;
 const STRICTNESS_OPTIONS = ['Broaden', 'Narrow', 'Keep'] as const;
 
+function journeyAtGlance(audience: AudiencePlan): { touchpoints: number; days: number; stopSummary: string; nonResponseSummary: string; branchSummary: string } {
+  const nodes = audience.flow?.nodes ?? [];
+  const edges = audience.flow?.edges ?? [];
+  const messageCount = nodes.filter((n) => n.type === 'message').length;
+  let totalDays = 0;
+  nodes.forEach((n) => {
+    if (n.type === 'delay' && typeof n.data?.days === 'number') totalDays += n.data.days;
+  });
+  const b = audience.blueprint;
+  const stopSummary = (b.stopConditions?.length ? b.stopConditions.join('; ') : '—') || '—';
+  const nonResponseSummary = b.doNothingBehavior ?? '—';
+  const branchSummary = edges.length
+    ? edges.map((e) => (e.label ? e.label : e.condition ? `If ${e.condition}` : `${e.from} → ${e.to}`)).join('; ')
+    : 'Single path';
+  return {
+    touchpoints: messageCount,
+    days: totalDays || 7,
+    stopSummary,
+    nonResponseSummary,
+    branchSummary,
+  };
+}
+
 export default function TabBlueprint({
   audience,
   onUpdate,
@@ -18,16 +41,17 @@ export default function TabBlueprint({
 }) {
   const [reviseInput, setReviseInput] = useState('');
   const b = audience.blueprint;
+  const glance = journeyAtGlance(audience);
 
   return (
-    <div className="tab-blueprint">
-      {/* At a glance */}
+    <div className="tab-blueprint tab-strategy">
+      {/* At a glance — Goal is verb + outcome; audience name lives in the lens only */}
       <section className="blueprint-section">
         <h4>Summary</h4>
         <div className="glance-cards">
           <div className="glance-card">
             <span className="glance-label">Goal</span>
-            <span className="glance-value">{b.goal || audience.name}</span>
+            <span className="glance-value">{b.goal ?? '—'}</span>
           </div>
           <div className="glance-card">
             <span className="glance-label">Audience</span>
@@ -44,6 +68,17 @@ export default function TabBlueprint({
               {b.cadence?.quietHours ? ` · ${b.cadence.quietHours}` : ''}
             </span>
           </div>
+        </div>
+      </section>
+
+      {/* Journey at a glance */}
+      <section className="blueprint-section journey-at-glance">
+        <h4>Journey at a glance</h4>
+        <div className="journey-glance-card">
+          <p><strong>Touchpoints & spacing:</strong> {glance.touchpoints} touches over {glance.days} days</p>
+          <p><strong>Stop conditions:</strong> {glance.stopSummary}</p>
+          <p><strong>Non-response handling:</strong> {glance.nonResponseSummary}</p>
+          <p><strong>Branch summary:</strong> {glance.branchSummary}</p>
         </div>
       </section>
 

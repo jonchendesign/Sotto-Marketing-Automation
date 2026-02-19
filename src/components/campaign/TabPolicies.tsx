@@ -43,7 +43,7 @@ export default function TabPolicies({
         )}
       </div>
       <details className="policies-logic">
-        <summary>View as logic</summary>
+        <summary>View rule details</summary>
         <pre className="logic-pre">
           {JSON.stringify({ global: globalRules, audience: audienceRules }, null, 2)}
         </pre>

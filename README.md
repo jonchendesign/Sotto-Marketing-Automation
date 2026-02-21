@@ -1,48 +1,37 @@
-# Campaign Builder - Kiehl's Prototype
+# Sotto
 
-An interactive, single-page prototype that simulates an AI-chat-led campaign builder for Kiehl's.
+SMS campaigns that write themselves. You describe what you want; Sotto drafts the plan, the copy, and the flow. You review and ship.
 
-## Features
+---
 
-- **Split-pane UI**: Chat interface on the left, Campaign Canvas on the right
-- **Natural language commands**: Build and modify campaigns through chat
-- **Progressive disclosure**: Collapsible sections with inline editing
-- **Conflict detection**: Automatic schedule conflict checking
-- **Launch flow**: Save Draft, Schedule, and Launch with validation
+## What it does
 
-## Getting Started
+- **Campaigns** — Start with a short brief (goal, audience, constraints). Sotto proposes audiences, message copy, and a send sequence. You edit in plain language or tweak the flow.
+- **Plan** — One-page summary: who it’s for, core idea, how often we message, what happens if they don’t respond, when we stop, and sample messages. No jargon.
+- **Preview** — See what contacts get in different scenarios (they engage, they ignore, they buy).
+- **Flow** — The actual sequence (trigger → messages → waits → exits). Pin steps you want to keep; ask Sotto to redraft around them.
+- **Rules** — Global and per-audience guardrails (frequency, quiet hours, who we never message). Shown in plain language with an optional “view as logic” for the technical side.
+- **Knowledge base** — Upload brand voice, offer rules, and compliance notes. Sotto uses this when drafting so campaigns sound like you and stay in bounds.
+
+Positioning: professional, credible, modern. Clear value; no filler.
+
+---
+
+## Run it
 
 ```bash
-# Install dependencies
 npm install
-
-# Start development server
+cp .env.example .env   # add GEMINI_API_KEY
 npm run dev
 ```
 
-## Chat Commands
+- App: http://localhost:5173  
+- API: http://localhost:3001 (proxied at `/api`)
 
-- `create valentine's moisturizer campaign` - Creates the seed campaign
-- `change discount to 15%` - Updates the offer percentage
-- `move launch to feb 8` - Shifts the entire schedule
-- `remove last sms` - Removes the last SMS touchpoint
-- `add push` - Adds a Push notification channel
-- `show me conflicts` - Displays current schedule conflicts
-- `rename campaign to [name]` - Renames the campaign
+Without a Gemini API key, the app loads but draft/revise/redraft calls will fail.
 
-## Seed Scenario
+---
 
-- **Brand**: Kiehl's
-- **Campaign**: Valentine's Day Moisturizer Launch
-- **Product**: Ultra Hydration Moisturizer
-- **Offer**: 20% off
-- **Window**: Feb 7–Feb 14, 2026
-- **Channels**: SMS + Email
-- **Touches**: 3 (Launch SMS, Reminder Email, Last-chance SMS)
+## Stack
 
-## Tech Stack
-
-- React 18
-- TypeScript
-- Vite
-- CSS (no frameworks)
+React 18, TypeScript, Vite, react-router-dom. Express server for Gemini. Data stored in localStorage for the prototype.
